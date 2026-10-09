@@ -8,11 +8,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Mukta:wght@400;500;600;700;800&display=swap">
 <style>
 /* ShopDukaanSe — central marketplace landing page.
-   Flow: pincode entry -> fetch Directory API (Directory_Code.gs, a SEPARATE Apps Script +
-   Google Sheet from any individual shop) -> Swiggy/Zomato-style shop cards -> tap a card to
-   go straight to THAT shop's own catalogue.html (its own separate Sheet/Script/repo).
-   This page never touches any shop's own data — it only reads the central "Shops" directory.
-   Language: English (English script) or Hindi (Devanagari script) — never mixed. */
+   Flow: pincode -> pick village -> Swiggy/Zomato-style shop cards -> tap a card to go straight to
+   THAT shop's own catalogue.html (its own separate Sheet/Script/repo). This page never touches any
+   shop's own data — it only reads the central "Shops"/"Pincode_Village"/"Platform" directory.
+   Language: English (English script) or Hindi (Devanagari script) — never mixed.
+   Location (pincode+village) is remembered in this browser — asked once, not every visit.
+   Loved/Bag/My Orders here are cross-shop SHORTCUTS only (each shop keeps its own separate data —
+   no shared cart/wishlist). Shops hand off their counts to this page via URL params when a
+   customer taps the brand "Home" icon inside a shop; this page just remembers the latest counts
+   per shop in ITS OWN storage so it can list "shops with something waiting" and jump back in. */
 :root{
   --brandgreen:#0d6758; --wine:#0b574a; --gold:#c08a2e;
   --bg:#fbf4ec; --surface:#ffffff; --fg:#2a1a22; --muted:#7a6a6f; --line:#ece0d4; --chip:#f6ebdd;
@@ -20,28 +24,46 @@
 }
 html,body{height:100%}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden}
 button{font:inherit;cursor:pointer;color:inherit}
-#app{max-width:480px;margin:0 auto;min-height:100%;background:var(--bg);box-shadow:0 0 0 1px var(--line);position:relative}
+#app{max-width:480px;height:100%;margin:0 auto;background:var(--bg);box-shadow:0 0 0 1px var(--line);position:relative;display:flex;flex-direction:column}
+#scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
-.topbar{padding:22px 20px 18px;position:relative}
+.topbar{padding:20px 20px 14px;position:relative}
 .topbar .hd{display:flex;align-items:center;justify-content:center;position:relative}
-.topbar h1{font-family:var(--display);font-weight:400;font-size:32px;margin:0;color:var(--brandgreen);text-align:center}
-.topbar p{margin:6px 0 0;color:var(--muted);font-size:13.5px;text-align:center}
+.topbar .brandlogo{display:block;height:32px;width:auto;margin:0 auto}
+.topbar p{margin:6px 0 0;color:var(--muted);font-size:13px;text-align:center}
 .langtog{position:absolute;right:0;top:0;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
 .langtog button{padding:6px 12px;font-size:12px;font-weight:700;background:none;border:0;color:var(--muted)}
 .langtog button.on{background:var(--brandgreen);color:#fff}
 
 .pincodeCard{margin:0 16px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(30,5,15,.06)}
-.pincodeCard label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pincodeCard label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .pinrow{display:flex;gap:8px}
 .pinrow input{flex:1;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;letter-spacing:.03em;background:var(--bg)}
 .pinrow button{background:var(--brandgreen);color:#fff;border:0;border-radius:12px;padding:0 20px;font-weight:700;font-size:14px}
 .pinrow button:disabled{opacity:.5}
 .pinhint{font-size:12px;color:var(--muted);margin-top:8px}
 .pinhint button{background:none;border:0;padding:0;color:var(--brandgreen);font-weight:700;text-decoration:underline}
+.vchips{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.vchip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600}
+.vchip.on{background:var(--brandgreen);color:#fff;border-color:var(--brandgreen)}
 
-.sec-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 16px 8px}
+.locchip{margin:0 16px 10px;display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--brandgreen)}
+.locchip button{background:none;border:0;padding:0;color:var(--wine);font-weight:700;text-decoration:underline;font-size:12px}
+
+.searchwrap{margin:0 16px 10px;position:relative}
+.searchbar{position:relative}
+.searchbar input{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 14px 11px 36px;font-size:14px;background:var(--surface);box-shadow:0 2px 8px rgba(30,5,15,.05)}
+.searchbar svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2}
+.searchdrop{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 24px rgba(30,5,15,.12);z-index:20;overflow:hidden}
+.searchdrop[hidden]{display:none}
+.shit{display:flex;flex-direction:column;align-items:flex-start;width:100%;padding:10px 14px;border:0;background:none;text-align:left;border-bottom:1px solid var(--line)}
+.shit b{font-size:14px}
+.shit span{font-size:12px;color:var(--muted)}
+.seeall{width:100%;padding:10px 14px;border:0;background:var(--chip);text-align:center;font-size:13px;font-weight:700;color:var(--brandgreen)}
+
+.sec-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 16px 8px}
 
 #list{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
 
@@ -59,47 +81,95 @@ button{font:inherit;cursor:pointer;color:inherit}
 .spinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--brandgreen);border-radius:50%;margin:0 auto 10px;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.footnote{text-align:center;color:var(--muted);font-size:12px;padding:10px 20px 26px}
+.tabbar{display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));flex:0 0 auto}
+.tabbar button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);padding:6px 2px;border-radius:10px;position:relative}
+.tabbar svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabbar .badge{position:absolute;top:2px;right:22%;background:var(--gold);color:#2a1d00;font-size:10px;font-weight:700;border-radius:99px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.tabbar .badge[hidden]{display:none}
+
+.scrim{position:fixed;inset:0;background:rgba(24,8,14,.5);z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:41;max-height:75vh;overflow-y:auto}
+.sheet h3{margin:4px 0 10px;font-size:18px}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
+.x{position:absolute;right:14px;top:14px;background:none;border:0;font-size:18px;color:var(--muted)}
+.bagrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.bagrow:last-child{border:0}
+.bagrow b{font-size:14px}
+.bagrow span{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+.resume{background:var(--brandgreen);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;white-space:nowrap}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <div class="topbar">
-    <div class="hd">
-      <h1>ShopDukaanSe</h1>
-      <div class="langtog" id="langtog">
-        <button id="langHi">हिंदी</button>
-        <button id="langEn">EN</button>
+  <div id="scroll">
+    <div class="topbar">
+      <div class="hd">
+        <img class="brandlogo" src="data:image/png;base64,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" alt="ShopDukaanSe">
+        <div class="langtog" id="langtog">
+          <button id="langHi">हिंदी</button>
+          <button id="langEn">EN</button>
+        </div>
       </div>
+      <p id="tagline"></p>
     </div>
-    <p id="tagline"></p>
+
+    <div class="pincodeCard" id="pincodeCard">
+      <label for="pin" id="pinLabel"></label>
+      <div class="pinrow">
+        <input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6">
+        <button id="goBtn"></button>
+      </div>
+      <div class="vchips" id="vchips" hidden></div>
+      <div class="pinhint"><span id="pinHintText"></span> <button id="showAllBtn"></button></div>
+    </div>
+
+    <div id="locchipWrap"></div>
+
+    <div class="searchwrap" id="searchwrap" hidden>
+      <div class="searchbar">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="shopSearch">
+      </div>
+      <div class="searchdrop" id="searchdrop" hidden></div>
+    </div>
+
+    <div class="sec-label" id="listLabel" hidden></div>
+    <div id="list"></div>
   </div>
 
-  <div class="pincodeCard">
-    <label for="pin" id="pinLabel"></label>
-    <div class="pinrow">
-      <input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6">
-      <button id="goBtn"></button>
-    </div>
-    <div class="pinhint"><span id="pinHintText"></span> <button id="showAllBtn"></button></div>
-  </div>
-
-  <div class="sec-label" id="listLabel" hidden></div>
-  <div id="list"></div>
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="loved" aria-label="Loved">
+      <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-9.2-8.6C1.3 8.4 3 5 6.3 5c2 0 3.2 1.1 3.7 2 .5-.9 1.7-2 3.7-2C17 5 18.7 8.4 17.2 11.4 15 15.6 12 20 12 20z" transform="translate(2 0)"/></svg>
+      <span id="navLovedLbl"></span>
+      <span class="badge" id="badgeLoved" hidden>0</span>
+    </button>
+    <button data-tab="bag" aria-label="Bag">
+      <svg viewBox="0 0 24 24"><path d="M6 7h12l1 14H5L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+      <span id="navBagLbl"></span>
+      <span class="badge" id="badgeBag" hidden>0</span>
+    </button>
+    <button data-tab="orders" aria-label="Orders">
+      <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <span id="navOrdersLbl"></span>
+      <span class="badge" id="badgeOrders" hidden>0</span>
+    </button>
+  </nav>
 
 </div>
+<div id="layer"></div>
 
 <script>
 /* ===== CONFIGURE THIS ===== */
-/* Paste the /exec URL you get after deploying Directory_Code.gs as a Web App here. */
 var DIRECTORY_API_URL = "https://script.google.com/macros/s/AKfycbyUwJdKLtoOmLYBTKPYkz7Oif0xVjsgq_JTHMzGYl64v64xbr4tsZQ1AnfUHYFy-zI/exec";
 /* =========================== */
 
 var $ = function(s){ return document.querySelector(s); };
 var listEl = $("#list"), labelEl = $("#listLabel");
+var LOC_KEY = "sdse_location", SHOPS_KEY = "sdse_openshops";
 
-var LANG = "hi"; // default Hindi (Devanagari), matches catalogue.html's default audience
+var LANG_KEY = "sdse_lang";
+var LANG = localStorage.getItem(LANG_KEY) || "hi";
 
 var STR = {
   en: {
@@ -109,7 +179,9 @@ var STR = {
     go: "Search",
     pin_hint: "Don't know the pincode?",
     show_all: "See all shops",
-    serving: function(p){ return "Shops delivering to " + p; },
+    pick_village: "Select your village/town",
+    change: "change",
+    serving: function(v,p){ return v ? ("Shops delivering to " + v) : ("Shops delivering to " + p); },
     all_shops: "All shops",
     delivers_to: "Delivers to: ",
     view_shop: "View shop",
@@ -118,7 +190,18 @@ var STR = {
     loading: "Looking for shops…",
     setup_needed: "Setup pending: deploy Directory_Code.gs and paste its URL into DIRECTORY_API_URL in home.html.",
     generic_error: "Something went wrong. Please try again.",
-    network_error: "Please check your internet connection and try again."
+    network_error: "Please check your internet connection and try again.",
+    search_ph: "Search shops…",
+    see_all_n: function(n){ return "See all " + n + " results"; },
+    nav_loved: "Loved", nav_bag: "Bag", nav_orders: "Orders",
+    loved_title: "Loved items", bag_title: "Open bags", orders_title: "Your orders",
+    loved_empty: "You haven't loved anything yet — open a shop to start browsing.",
+    bag_empty: "No items waiting in any bag — open a shop to start shopping.",
+    orders_empty: "No orders yet — open a shop to place one.",
+    items_in_bag: function(n){ return n + (n===1?" item":" items") + " in bag"; },
+    items_loved: function(n){ return n + (n===1?" item":" items") + " loved"; },
+    has_orders: "Has order history",
+    resume: "Resume"
   },
   hi: {
     tagline: "अपने आस-पास की दुकानों से सीधा ऑर्डर करें",
@@ -127,7 +210,9 @@ var STR = {
     go: "खोजें",
     pin_hint: "पिनकोड नहीं पता?",
     show_all: "सभी दुकानें देखें",
-    serving: function(p){ return "पिनकोड (" + p + ") पर डिलीवर करने वाली दुकानें"; },
+    pick_village: "अपना गांव/कस्बा चुनें",
+    change: "बदलें",
+    serving: function(v,p){ return "डिलीवरी क्षेत्र: " + (v || p); },
     all_shops: "सभी दुकानें",
     delivers_to: "डिलीवरी क्षेत्र: ",
     view_shop: "दुकान देखें",
@@ -136,7 +221,18 @@ var STR = {
     loading: "दुकानें खोजी जा रही हैं…",
     setup_needed: "सेटअप बाकी है: Directory_Code.gs डिप्लॉय करें और उसका URL home.html में DIRECTORY_API_URL में डालें।",
     generic_error: "कुछ गड़बड़ हो गई। कृपया दोबारा कोशिश करें।",
-    network_error: "कृपया इंटरनेट कनेक्शन जांचें और दोबारा कोशिश करें।"
+    network_error: "कृपया इंटरनेट कनेक्शन जांचें और दोबारा कोशिश करें।",
+    search_ph: "दुकानें खोजें…",
+    see_all_n: function(n){ return "सभी " + n + " नतीजे देखें"; },
+    nav_loved: "पसंदीदा", nav_bag: "बैग", nav_orders: "ऑर्डर",
+    loved_title: "पसंदीदा सामान", bag_title: "खुले बैग", orders_title: "आपके ऑर्डर",
+    loved_empty: "अभी तक कुछ पसंद नहीं किया — किसी दुकान में जाकर देखें।",
+    bag_empty: "किसी भी बैग में सामान नहीं है — किसी दुकान से खरीदारी शुरू करें।",
+    orders_empty: "अभी तक कोई ऑर्डर नहीं — किसी दुकान से ऑर्डर करें।",
+    items_in_bag: function(n){ return n + " आइटम बैग में"; },
+    items_loved: function(n){ return n + " आइटम पसंद किए गए"; },
+    has_orders: "ऑर्डर इतिहास मौजूद है",
+    resume: "जारी रखें"
   }
 };
 function t(key){ return STR[LANG][key]; }
@@ -146,6 +242,33 @@ function escapeHtml(s){
     return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
   });
 }
+function readJSON(key, fallback){
+  try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; }
+}
+function writeJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+/* ============== Handoff from a shop's "Home" nav tap ==============
+   A shop page navigates here with ?shop=<id>&name=<shop name>&url=<catalogue url>&bag=<n>&
+   loved=<n>&orders=<0|1>. We merge that into our own per-shop record so the Loved/Bag/Orders
+   shortcuts below know which shops have something waiting. */
+(function consumeHandoff(){
+  var qp = new URLSearchParams(location.search);
+  var shopId = qp.get("shop");
+  if(shopId){
+    var all = readJSON(SHOPS_KEY, {});
+    all[shopId] = {
+      name: qp.get("name") || shopId,
+      url: qp.get("url") || "",
+      bag: Number(qp.get("bag")) || 0,
+      loved: Number(qp.get("loved")) || 0,
+      orders: qp.get("orders") === "1",
+      updatedAt: Date.now()
+    };
+    writeJSON(SHOPS_KEY, all);
+    // Strip the query string so a refresh doesn't reapply stale counts.
+    history.replaceState({}, "", location.pathname);
+  }
+})();
 
 function applyStaticLabels(){
   document.title = "ShopDukaanSe";
@@ -155,49 +278,136 @@ function applyStaticLabels(){
   $("#goBtn").textContent = t("go");
   $("#pinHintText").textContent = t("pin_hint");
   $("#showAllBtn").textContent = t("show_all");
+  $("#shopSearch").placeholder = t("search_ph");
+  $("#navLovedLbl").textContent = t("nav_loved");
+  $("#navBagLbl").textContent = t("nav_bag");
+  $("#navOrdersLbl").textContent = t("nav_orders");
   $("#langHi").classList.toggle("on", LANG==="hi");
   $("#langEn").classList.toggle("on", LANG==="en");
-  html.lang = LANG;
+  document.documentElement.lang = LANG;
+  renderLocChip();
+  renderNavBadges();
 }
-var html = document.documentElement;
 
 function renderState(html, cls){
   listEl.innerHTML = '<div class="state' + (cls ? " " + cls : "") + '">' + html + "</div>";
 }
 
-var lastShops = null, lastPincode = "";
+var lastShops = [], currentPincode = "", currentVillage = "", villageOptions = [];
 
-function renderShops(shops, pincode){
+/* ============== Pincode -> village step ============== */
+function fetchVillages(pincode){
+  return fetch(DIRECTORY_API_URL + "?type=villages&pincode=" + encodeURIComponent(pincode))
+    .then(function(r){ return r.json(); })
+    .then(function(data){ return (data && data.ok) ? (data.villages||[]) : []; })
+    .catch(function(){ return []; });
+}
+
+function showVillageChips(villages){
+  villageOptions = villages;
+  var box = $("#vchips");
+  if(!villages.length){ box.hidden = true; box.innerHTML=""; return; }
+  box.hidden = false;
+  box.innerHTML = villages.map(function(v){
+    return '<button class="vchip" data-v="'+escapeHtml(v)+'">'+escapeHtml(v)+'</button>';
+  }).join("");
+}
+$("#vchips").onclick = function(e){
+  var b = e.target.closest(".vchip"); if(!b) return;
+  $("#vchips").querySelectorAll(".vchip").forEach(function(x){ x.classList.toggle("on", x===b); });
+  currentVillage = b.dataset.v;
+  writeJSON(LOC_KEY, { pincode: currentPincode, village: currentVillage });
+  collapseToChip();
+  loadShops(currentPincode);
+};
+
+function collapseToChip(){
+  $("#pincodeCard").hidden = true;
+  renderLocChip();
+}
+function expandPincodeCard(){
+  $("#pincodeCard").hidden = false;
+  $("#locchipWrap").innerHTML = "";
+}
+function renderLocChip(){
+  if($("#pincodeCard").hidden && currentPincode){
+    $("#locchipWrap").innerHTML =
+      '<div class="locchip">📍 ' + escapeHtml(currentVillage ? (currentVillage+", "+currentPincode) : currentPincode) +
+      ' <button id="chipChange">· ' + t("change") + '</button></div>';
+    var b = $("#chipChange"); if(b) b.onclick = function(){ expandPincodeCard(); };
+  } else {
+    $("#locchipWrap").innerHTML = "";
+  }
+}
+
+function startPincodeFlow(pincode){
+  currentPincode = pincode;
+  showVillageChips([]);
+  fetchVillages(pincode).then(function(villages){
+    if(villages.length){
+      showVillageChips(villages);
+      renderState("");
+      listEl.innerHTML = "";
+      labelEl.hidden = true;
+      $("#searchwrap").hidden = true;
+    } else {
+      // No village mapping for this pincode yet — just show shops for the pincode directly.
+      currentVillage = "";
+      writeJSON(LOC_KEY, { pincode: pincode, village: "" });
+      collapseToChip();
+      loadShops(pincode);
+    }
+  });
+}
+
+$("#goBtn").onclick = function(){
+  var v = $("#pin").value.replace(/\D/g, "");
+  if(v.length !== 6){ $("#pin").focus(); return; }
+  startPincodeFlow(v);
+};
+$("#pin").addEventListener("keydown", function(e){ if(e.key === "Enter") $("#goBtn").click(); });
+$("#showAllBtn").onclick = function(){
+  currentPincode = ""; currentVillage = "";
+  expandPincodeCard();
+  showVillageChips([]);
+  loadShops("");
+};
+
+/* ============== Shop list ============== */
+function renderShops(shops, pincode, village){
+  lastShops = shops;
   labelEl.hidden = false;
-  labelEl.textContent = pincode ? t("serving")(pincode) : t("all_shops");
+  labelEl.textContent = pincode ? t("serving")(village, pincode) : t("all_shops");
+  $("#searchwrap").hidden = shops.length === 0;
   if(!shops.length){
     renderState(pincode
       ? t("none_for_pincode") + ' <br><button id="tryAll" style="margin-top:8px;background:none;border:0;color:var(--brandgreen);font-weight:700;text-decoration:underline">' + t("show_all") + '</button>'
       : t("none_listed"));
-    if(pincode){ var b=$("#tryAll"); if(b) b.onclick=function(){ loadShops(""); }; }
+    if(pincode){ var b=$("#tryAll"); if(b) b.onclick=function(){ $("#showAllBtn").click(); }; }
     return;
   }
-  listEl.innerHTML = shops.map(function(s){
-    var villages = (s.servesVillages||[]).join(", ");
-    var banner = s.bannerUrl ? '<img class="banner" src="'+escapeHtml(s.bannerUrl)+'" alt="">' : "";
-    return (
-      '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'">' +
-        banner +
-        '<div class="body">' +
-          '<h3>'+escapeHtml(s.name)+'</h3>' +
-          (s.tagline ? '<p class="tagline">'+escapeHtml(s.tagline)+'</p>' : '') +
-          (villages ? '<p class="villages"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12a7 7 0 1 1 14 0c0 4.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>'+t("delivers_to")+escapeHtml(villages)+'</span></p>' : '') +
-          '<div class="go">'+t("view_shop")+' &rarr;</div>' +
-        '</div>' +
-      '</a>'
-    );
-  }).join("");
+  listEl.innerHTML = shops.map(shopCardHTML).join("");
+}
+function shopCardHTML(s){
+  var villages = (s.servesVillages||[]).join(", ");
+  var banner = s.bannerUrl ? '<img class="banner" src="'+escapeHtml(s.bannerUrl)+'" alt="">' : "";
+  return (
+    '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'">' +
+      banner +
+      '<div class="body">' +
+        '<h3>'+escapeHtml(s.name)+'</h3>' +
+        (s.tagline ? '<p class="tagline">'+escapeHtml(s.tagline)+'</p>' : '') +
+        (villages ? '<p class="villages"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12a7 7 0 1 1 14 0c0 4.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>'+t("delivers_to")+escapeHtml(villages)+'</span></p>' : '') +
+        '<div class="go">'+t("view_shop")+' &rarr;</div>' +
+      '</div>' +
+    '</a>'
+  );
 }
 
 function loadShops(pincode){
-  lastPincode = pincode;
   renderState('<div class="spinner"></div>' + t("loading"));
   labelEl.hidden = true;
+  $("#searchwrap").hidden = true;
   if(!DIRECTORY_API_URL || DIRECTORY_API_URL.indexOf("PASTE_YOUR") === 0){
     renderState(t("setup_needed"), "err");
     return;
@@ -205,39 +415,124 @@ function loadShops(pincode){
   var url = DIRECTORY_API_URL + (pincode ? ("?pincode=" + encodeURIComponent(pincode)) : "");
   fetch(url).then(function(r){ return r.json(); }).then(function(data){
     if(!data || !data.ok){ renderState(t("generic_error"), "err"); return; }
-    lastShops = data.shops || [];
-    renderShops(lastShops, pincode);
+    renderShops(data.shops || [], pincode, currentVillage);
   }).catch(function(){
     renderState(t("network_error"), "err");
   });
 }
 
-$("#goBtn").onclick = function(){
-  var v = $("#pin").value.replace(/\D/g, "");
-  if(v.length !== 6){ $("#pin").focus(); return; }
-  loadShops(v);
+/* ============== Shop search (preview 3-4 + "see all", tap-outside closes) ============== */
+var SEARCH_PREVIEW_SIZE = 4;
+var searchFiltered = null; // non-null once the user has searched, used to override the main list
+$("#shopSearch").oninput = function(){
+  var q = this.value.trim().toLowerCase();
+  var drop = $("#searchdrop");
+  if(!q){ drop.hidden = true; if(searchFiltered){ searchFiltered=null; renderShops(lastShops, currentPincode, currentVillage); } return; }
+  var matches = lastShops.filter(function(s){ return (s.name||"").toLowerCase().indexOf(q) !== -1; });
+  var preview = matches.slice(0, SEARCH_PREVIEW_SIZE);
+  if(!preview.length){
+    drop.hidden = false;
+    drop.innerHTML = '<div style="padding:14px;color:var(--muted);font-size:13px;text-align:center">'+t("none_listed")+'</div>';
+    return;
+  }
+  drop.hidden = false;
+  drop.innerHTML = preview.map(function(s){
+    return '<button class="shit" data-id="'+escapeHtml(s.shopId)+'"><b>'+escapeHtml(s.name)+'</b>'+(s.tagline?'<span>'+escapeHtml(s.tagline)+'</span>':'')+'</button>';
+  }).join("") + (matches.length > preview.length ? '<button class="seeall" data-seeall="1">'+t("see_all_n")(matches.length)+'</button>' : "");
+  drop.dataset.matches = JSON.stringify(matches.map(function(s){return s.shopId;}));
+  drop._matches = matches;
 };
-$("#pin").addEventListener("keydown", function(e){ if(e.key === "Enter") $("#goBtn").click(); });
-$("#showAllBtn").onclick = function(){ loadShops(""); };
+$("#searchdrop").onclick = function(e){
+  var seeall = e.target.closest("[data-seeall]");
+  if(seeall){
+    searchFiltered = this._matches;
+    renderShops(searchFiltered, currentPincode, currentVillage);
+    this.hidden = true;
+    return;
+  }
+  var b = e.target.closest("[data-id]"); if(!b) return;
+  var s = (this._matches||[]).find(function(x){ return x.shopId === b.dataset.id; });
+  if(s) location.href = s.catalogueUrl;
+};
+document.addEventListener("click", function(e){
+  if($("#searchdrop").hidden) return;
+  if(e.target.closest(".searchwrap")) return;
+  $("#searchdrop").hidden = true;
+}, {passive:true});
+
+/* ============== Loved / Bag / Orders shortcuts ============== */
+function openShopsWithField(field){
+  var all = readJSON(SHOPS_KEY, {});
+  return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); })
+    .filter(function(s){ return field==="orders" ? !!s.orders : (Number(s[field])>0); });
+}
+function renderNavBadges(){
+  var bagShops = openShopsWithField("bag");
+  var lovedShops = openShopsWithField("loved");
+  var orderShops = openShopsWithField("orders");
+  var bagTotal = bagShops.reduce(function(a,s){ return a+Number(s.bag||0); },0);
+  var lovedTotal = lovedShops.reduce(function(a,s){ return a+Number(s.loved||0); },0);
+  setBadge("#badgeBag", bagTotal);
+  setBadge("#badgeLoved", lovedTotal);
+  setBadge("#badgeOrders", orderShops.length);
+}
+function setBadge(sel, n){ var el=$(sel); el.hidden = !n; el.textContent = n; }
+
+function sheet(html){ $("#layer").innerHTML = '<div class="scrim" id="scrim"></div><div class="sheet" role="dialog" aria-modal="true"><button class="x" id="sx">✕</button><div class="grab"></div>'+html+'</div>'; $("#scrim").onclick=closeSheet; $("#sx").onclick=closeSheet; }
+function closeSheet(){ $("#layer").innerHTML=""; }
+
+function openShortcutSheet(field, titleKey, emptyKey, resumeParam, countLabel){
+  var shops = openShopsWithField(field);
+  if(!shops.length){
+    sheet('<h3>'+t(titleKey)+'</h3><p style="color:var(--muted);font-size:13.5px">'+t(emptyKey)+'</p>');
+    return;
+  }
+  var rows = shops.map(function(s){
+    var sub = field==="orders" ? t("has_orders") : countLabel(Number(s[field]||0));
+    var url = s.url + (s.url.indexOf("?")!==-1 ? "&" : "?") + "resume=" + resumeParam;
+    return '<div class="bagrow"><div><b>'+escapeHtml(s.name)+'</b><span>'+sub+'</span></div><a class="resume" href="'+escapeHtml(url)+'">'+t("resume")+'</a></div>';
+  }).join("");
+  sheet('<h3>'+t(titleKey)+'</h3>'+rows);
+}
+
+$("#tabbar").onclick = function(e){
+  var b = e.target.closest("button[data-tab]"); if(!b) return;
+  var tab = b.dataset.tab;
+  if(tab==="bag") openShortcutSheet("bag","bag_title","bag_empty","bag",t("items_in_bag"));
+  if(tab==="loved") openShortcutSheet("loved","loved_title","loved_empty","loved",t("items_loved"));
+  if(tab==="orders") openShortcutSheet("orders","orders_title","orders_empty","orders",function(){return "";});
+};
 
 function setLang(lang){
   LANG = lang;
+  try{ localStorage.setItem(LANG_KEY, lang); }catch(e){}
   applyStaticLabels();
-  // Re-render whatever's currently on screen in the new language, without a refetch.
-  if(lastShops !== null) renderShops(lastShops, lastPincode);
+  if(searchFiltered){ renderShops(searchFiltered, currentPincode, currentVillage); }
+  else if(lastShops.length || currentPincode==="" ){ /* no-op: list already rendered, labels refreshed above */ }
 }
 $("#langHi").onclick = function(){ setLang("hi"); };
 $("#langEn").onclick = function(){ setLang("en"); };
 
-applyStaticLabels();
-
-/* If a shop's direct link/QR ever points here with ?pincode= pre-filled, honor it; otherwise
-   show nothing until the customer types a pincode (keeps the page fast/clean, no "browse
-   everything" wall of shops by default). */
-(function(){
+/* ============== Boot ============== */
+(function boot(){
+  applyStaticLabels();
   var qp = new URLSearchParams(location.search);
-  var pin = (qp.get("pincode")||"").replace(/\D/g,"");
-  if(pin){ $("#pin").value = pin; loadShops(pin); }
+  var qpPin = (qp.get("pincode")||"").replace(/\D/g,"");
+  var saved = readJSON(LOC_KEY, null);
+  if(qpPin){
+    // A shop's own direct link/QR pre-filling a pincode takes priority over any saved location.
+    $("#pin").value = qpPin;
+    startPincodeFlow(qpPin);
+    return;
+  }
+  if(saved && saved.pincode){
+    currentPincode = saved.pincode; currentVillage = saved.village || "";
+    $("#pin").value = saved.pincode;
+    collapseToChip();
+    loadShops(saved.pincode);
+    return;
+  }
+  // Nothing saved yet — show the pincode card, nothing in the list until they search.
 })();
 </script>
 </body>
