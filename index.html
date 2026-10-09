@@ -19,7 +19,7 @@
    per shop in ITS OWN storage so it can list "shops with something waiting" and jump back in. */
 :root{
   --brandgreen:#0d6758; --wine:#0b574a; --gold:#c08a2e;
-  --bg:#fbf4ec; --surface:#ffffff; --fg:#2a1a22; --muted:#7a6a6f; --line:#ece0d4; --chip:#f6ebdd;
+  --bg:#ffffff; --surface:#ffffff; --fg:#2a1a22; --muted:#7a6a6f; --line:#ece0d4; --chip:#f6ebdd;
   --display:"Yatra One","Mukta",Georgia,serif; --body:"Mukta",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 html,body{height:100%}
@@ -29,13 +29,13 @@ button{font:inherit;cursor:pointer;color:inherit}
 #app{max-width:480px;height:100%;margin:0 auto;background:var(--bg);box-shadow:0 0 0 1px var(--line);position:relative;display:flex;flex-direction:column}
 #scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
-.topbar{padding:20px 20px 14px;position:relative}
-.topbar .hd{display:flex;align-items:center;justify-content:center;position:relative}
-.topbar .brandlogo{display:block;height:32px;width:auto;margin:0 auto}
-.topbar p{margin:6px 0 0;color:var(--muted);font-size:13px;text-align:center}
-.langtog{position:absolute;right:0;top:0;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
-.langtog button{padding:6px 12px;font-size:12px;font-weight:700;background:none;border:0;color:var(--muted)}
-.langtog button.on{background:var(--brandgreen);color:#fff}
+.topbar{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.topbar .hd{display:flex;align-items:center;justify-content:space-between}
+.topbar .brandlogo{display:block;height:32px;width:auto}
+.topbar p{margin:8px 0 0;color:var(--muted);font-size:13px;text-align:left}
+.langtog{display:flex;border:1px solid var(--brandgreen);border-radius:999px;overflow:hidden;font-size:12px;font-weight:700;flex:0 0 auto}
+.langtog button{padding:5px 10px;background:none;border:0;color:var(--brandgreen);opacity:.6}
+.langtog button.on{background:var(--brandgreen);color:#fff;opacity:1}
 
 .pincodeCard{margin:0 16px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(30,5,15,.06)}
 .pincodeCard label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
@@ -67,10 +67,14 @@ button{font:inherit;cursor:pointer;color:inherit}
 
 #list{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
 
-.shopcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px rgba(30,5,15,.07)}
-.shopcard .banner{width:100%;height:120px;object-fit:cover;background:var(--chip);display:block}
+.shopcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px rgba(30,5,15,.07);color:inherit;text-decoration:none}
+.shopcard, .shopcard *{text-decoration:none}
+/* Same aspect ratio as the shop's OWN promo banner carousel in catalogue.html (#promoRail img:
+   aspect-ratio:12/5), so the first banner someone uploads looks identical in both places — no
+   separate upload, no different crop. */
+.shopcard .banner{width:100%;aspect-ratio:12/5;object-fit:cover;background:var(--chip);display:block}
 .shopcard .body{padding:12px 14px 14px}
-.shopcard h3{margin:0;font-size:17px;font-weight:800}
+.shopcard h3{margin:0;font-size:17px;font-weight:800;color:var(--brandgreen)}
 .shopcard .tagline{margin:3px 0 0;font-size:13px;color:var(--muted)}
 .shopcard .villages{margin:8px 0 0;font-size:12px;color:var(--brandgreen);font-weight:600;display:flex;gap:6px;align-items:flex-start}
 .shopcard .villages svg{width:14px;height:14px;flex:0 0 auto;margin-top:2px;stroke:var(--brandgreen);fill:none;stroke-width:2}
@@ -152,7 +156,6 @@ button{font:inherit;cursor:pointer;color:inherit}
     <button data-tab="orders" aria-label="Orders">
       <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
       <span id="navOrdersLbl"></span>
-      <span class="badge" id="badgeOrders" hidden>0</span>
     </button>
   </nav>
 
@@ -197,11 +200,13 @@ var STR = {
     loved_title: "Loved items", bag_title: "Open bags", orders_title: "Your orders",
     loved_empty: "You haven't loved anything yet — open a shop to start browsing.",
     bag_empty: "No items waiting in any bag — open a shop to start shopping.",
-    orders_empty: "No orders yet — open a shop to place one.",
+    orders_empty: "No orders found for this number.",
     items_in_bag: function(n){ return n + (n===1?" item":" items") + " in bag"; },
     items_loved: function(n){ return n + (n===1?" item":" items") + " loved"; },
-    has_orders: "Has order history",
-    resume: "Resume"
+    resume: "Resume",
+    phone_ph: "10-digit mobile number",
+    phone_invalid: "Enter a valid 10-digit mobile number.",
+    find: "Find"
   },
   hi: {
     tagline: "अपने आस-पास की दुकानों से सीधा ऑर्डर करें",
@@ -228,11 +233,13 @@ var STR = {
     loved_title: "पसंदीदा सामान", bag_title: "खुले बैग", orders_title: "आपके ऑर्डर",
     loved_empty: "अभी तक कुछ पसंद नहीं किया — किसी दुकान में जाकर देखें।",
     bag_empty: "किसी भी बैग में सामान नहीं है — किसी दुकान से खरीदारी शुरू करें।",
-    orders_empty: "अभी तक कोई ऑर्डर नहीं — किसी दुकान से ऑर्डर करें।",
+    orders_empty: "इस नंबर पर कोई ऑर्डर नहीं मिला।",
     items_in_bag: function(n){ return n + " आइटम बैग में"; },
     items_loved: function(n){ return n + " आइटम पसंद किए गए"; },
-    has_orders: "ऑर्डर इतिहास मौजूद है",
-    resume: "जारी रखें"
+    resume: "जारी रखें",
+    phone_ph: "10 अंकों का मोबाइल नंबर",
+    phone_invalid: "सही 10 अंकों का मोबाइल नंबर डालें।",
+    find: "खोजें"
   }
 };
 function t(key){ return STR[LANG][key]; }
@@ -387,12 +394,44 @@ function renderShops(shops, pincode, village){
     return;
   }
   listEl.innerHTML = shops.map(shopCardHTML).join("");
+  enrichShopBanners(shops);
+}
+// Each shop's OWN first promo banner (language-aware, same one shown in its own catalogue.html
+// carousel) is reused directly here instead of a separate banner_url upload. Cached per shop_id so
+// re-rendering the list (search, language switch) doesn't refetch. Falls back to the Directory's
+// banner_url, then to no image at all.
+var shopBannerCache = {}; // shopId -> resolved banner URL (or "" once confirmed none)
+function bannerForConfig(config, n){
+  return (config && (config["banner_"+n+"_"+LANG] || config["banner_"+n])) || "";
+}
+function enrichShopBanners(shops){
+  shops.forEach(function(s){
+    if(!s.apiUrl || shopBannerCache[s.shopId] !== undefined) return;
+    var url = s.apiUrl + (s.apiUrl.indexOf("?")!==-1?"&":"?") + "action=all";
+    fetch(url).then(function(r){ return r.json(); }).then(function(data){
+      var banner = bannerForConfig(data && data.config, 1) || s.bannerUrl || "";
+      shopBannerCache[s.shopId] = banner;
+      if(!banner) return;
+      var card = listEl.querySelector('.shopcard[data-shopid="'+CSS.escape(s.shopId)+'"]');
+      if(!card) return;
+      var img = card.querySelector("img.banner");
+      if(!img){
+        img = document.createElement("img");
+        img.className = "banner";
+        img.alt = "";
+        card.insertBefore(img, card.firstChild);
+      }
+      img.src = banner;
+    }).catch(function(){ shopBannerCache[s.shopId] = s.bannerUrl || ""; });
+  });
 }
 function shopCardHTML(s){
   var villages = (s.servesVillages||[]).join(", ");
-  var banner = s.bannerUrl ? '<img class="banner" src="'+escapeHtml(s.bannerUrl)+'" alt="">' : "";
+  var cachedBanner = shopBannerCache[s.shopId];
+  var bannerUrl = (cachedBanner !== undefined ? cachedBanner : s.bannerUrl) || "";
+  var banner = bannerUrl ? '<img class="banner" src="'+escapeHtml(bannerUrl)+'" alt="">' : "";
   return (
-    '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'">' +
+    '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'" data-shopid="'+escapeHtml(s.shopId)+'">' +
       banner +
       '<div class="body">' +
         '<h3>'+escapeHtml(s.name)+'</h3>' +
@@ -460,21 +499,19 @@ document.addEventListener("click", function(e){
   $("#searchdrop").hidden = true;
 }, {passive:true});
 
-/* ============== Loved / Bag / Orders shortcuts ============== */
+/* ============== Loved / Bag shortcuts (per-shop, via the handoff storage) ============== */
 function openShopsWithField(field){
   var all = readJSON(SHOPS_KEY, {});
   return Object.keys(all).map(function(id){ return Object.assign({id:id}, all[id]); })
-    .filter(function(s){ return field==="orders" ? !!s.orders : (Number(s[field])>0); });
+    .filter(function(s){ return Number(s[field])>0; });
 }
 function renderNavBadges(){
   var bagShops = openShopsWithField("bag");
   var lovedShops = openShopsWithField("loved");
-  var orderShops = openShopsWithField("orders");
   var bagTotal = bagShops.reduce(function(a,s){ return a+Number(s.bag||0); },0);
   var lovedTotal = lovedShops.reduce(function(a,s){ return a+Number(s.loved||0); },0);
   setBadge("#badgeBag", bagTotal);
   setBadge("#badgeLoved", lovedTotal);
-  setBadge("#badgeOrders", orderShops.length);
 }
 function setBadge(sel, n){ var el=$(sel); el.hidden = !n; el.textContent = n; }
 
@@ -488,11 +525,58 @@ function openShortcutSheet(field, titleKey, emptyKey, resumeParam, countLabel){
     return;
   }
   var rows = shops.map(function(s){
-    var sub = field==="orders" ? t("has_orders") : countLabel(Number(s[field]||0));
+    var sub = countLabel(Number(s[field]||0));
     var url = s.url + (s.url.indexOf("?")!==-1 ? "&" : "?") + "resume=" + resumeParam;
     return '<div class="bagrow"><div><b>'+escapeHtml(s.name)+'</b><span>'+sub+'</span></div><a class="resume" href="'+escapeHtml(url)+'">'+t("resume")+'</a></div>';
   }).join("");
   sheet('<h3>'+t(titleKey)+'</h3>'+rows);
+}
+
+/* ============== My Orders — unified across EVERY shop, by phone number ==============
+   Unlike Bag/Loved (which are per-shop, shown as shortcuts back into that shop), order history
+   should be visible as one list without having to know or pick which shop it was placed with
+   first. Each shop's own backend already has a public, privacy-safe phone-only lookup (returns a
+   REDACTED summary — id/date/status/amount/item count, no name/address/items) — this just calls
+   that same endpoint for every active shop in the directory (regardless of current pincode) and
+   merges the results, labelling each with its shop name. */
+var allShopsCache = null;
+function fetchAllShopsForOrders(){
+  if(allShopsCache) return Promise.resolve(allShopsCache);
+  return fetch(DIRECTORY_API_URL).then(function(r){ return r.json(); }).then(function(data){
+    allShopsCache = (data && data.ok) ? (data.shops||[]).filter(function(s){ return s.apiUrl; }) : [];
+    return allShopsCache;
+  }).catch(function(){ return []; });
+}
+function openOrdersSearchSheet(){
+  sheet(
+    '<h3>'+t("orders_title")+'</h3>' +
+    '<div class="pinrow"><input id="ordersPhone" inputmode="tel" maxlength="10" placeholder="'+t("phone_ph")+'">' +
+    '<button id="ordersFindBtn">'+t("find")+'</button></div>' +
+    '<div id="ordersResults" style="margin-top:12px"></div>'
+  );
+  var resEl = $("#ordersResults");
+  $("#ordersFindBtn").onclick = function(){
+    var phone = $("#ordersPhone").value.replace(/\D/g,"").slice(-10);
+    if(phone.length!==10){ resEl.innerHTML = '<p style="color:var(--muted);font-size:13.5px">'+t("phone_invalid")+'</p>'; return; }
+    resEl.innerHTML = '<div class="spinner" style="margin:14px auto"></div>';
+    fetchAllShopsForOrders().then(function(shops){
+      return Promise.all(shops.map(function(s){
+        var url = s.apiUrl + (s.apiUrl.indexOf("?")!==-1?"&":"?") + "action=orders&phone=" + phone;
+        return fetch(url).then(function(r){ return r.json(); }).then(function(data){
+          return (data && data.ok) ? (data.orders||[]).map(function(o){ return Object.assign({shopName:s.name}, o); }) : [];
+        }).catch(function(){ return []; });
+      }));
+    }).then(function(perShop){
+      var all = [].concat.apply([], perShop);
+      all.sort(function(a,b){ return new Date(b.placedAt||0) - new Date(a.placedAt||0); });
+      if(!all.length){ resEl.innerHTML = '<p style="color:var(--muted);font-size:13.5px">'+t("orders_empty")+'</p>'; return; }
+      resEl.innerHTML = all.map(function(o){
+        var when = o.placedAt ? new Date(o.placedAt).toLocaleDateString() : "";
+        return '<div class="bagrow"><div><b>'+escapeHtml(o.shopName)+'</b><span>'+escapeHtml(o.id||"")+' · '+escapeHtml(o.status||"")+' · ₹'+escapeHtml(String(o.amount||""))+'</span></div><span style="color:var(--muted);font-size:12px">'+when+'</span></div>';
+      }).join("");
+    });
+  };
+  $("#ordersPhone").addEventListener("keydown", function(e){ if(e.key==="Enter") $("#ordersFindBtn").click(); });
 }
 
 $("#tabbar").onclick = function(e){
@@ -500,15 +584,18 @@ $("#tabbar").onclick = function(e){
   var tab = b.dataset.tab;
   if(tab==="bag") openShortcutSheet("bag","bag_title","bag_empty","bag",t("items_in_bag"));
   if(tab==="loved") openShortcutSheet("loved","loved_title","loved_empty","loved",t("items_loved"));
-  if(tab==="orders") openShortcutSheet("orders","orders_title","orders_empty","orders",function(){return "";});
+  if(tab==="orders") openOrdersSearchSheet();
 };
 
 function setLang(lang){
   LANG = lang;
   try{ localStorage.setItem(LANG_KEY, lang); }catch(e){}
   applyStaticLabels();
-  if(searchFiltered){ renderShops(searchFiltered, currentPincode, currentVillage); }
-  else if(lastShops.length || currentPincode==="" ){ /* no-op: list already rendered, labels refreshed above */ }
+  // Each shop's reused banner is language-specific (banner_1_hi vs banner_1_en) — clear the cache
+  // and re-render so the right one gets (re)fetched.
+  shopBannerCache = {};
+  var listToShow = searchFiltered || lastShops;
+  if(listToShow && listToShow.length){ renderShops(listToShow, currentPincode, currentVillage); }
 }
 $("#langHi").onclick = function(){ setLang("hi"); };
 $("#langEn").onclick = function(){ setLang("en"); };
