@@ -31,7 +31,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 
 .topbar{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .topbar .hd{display:flex;align-items:center;justify-content:space-between}
-.topbar .brandlogo{display:block;height:32px;width:auto}
+.topbar .brandlogo{display:block;height:34px;width:auto}
 .topbar p{margin:8px 0 0;color:var(--muted);font-size:13px;text-align:left}
 .langtog{display:flex;border:1px solid var(--brandgreen);border-radius:999px;overflow:hidden;font-size:12px;font-weight:700;flex:0 0 auto}
 .langtog button{padding:5px 10px;background:none;border:0;color:var(--brandgreen);opacity:.6}
@@ -67,18 +67,19 @@ button{font:inherit;cursor:pointer;color:inherit}
 
 #list{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
 
-.shopcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px rgba(30,5,15,.07);color:inherit;text-decoration:none}
+/* Swiggy/Zomato-style compact ROW card: banner on the left (small, but same 12:5 aspect ratio as
+   the shop's own promo carousel so nothing looks cropped oddly), name/tagline/villages on the
+   right — instead of a tall stacked card with a full-width banner. */
+.shopcard{display:flex;align-items:stretch;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(30,5,15,.06);color:inherit;text-decoration:none}
 .shopcard, .shopcard *{text-decoration:none}
-/* Same aspect ratio as the shop's OWN promo banner carousel in catalogue.html (#promoRail img:
-   aspect-ratio:12/5), so the first banner someone uploads looks identical in both places — no
-   separate upload, no different crop. */
-.shopcard .banner{width:100%;aspect-ratio:12/5;object-fit:cover;background:var(--chip);display:block}
-.shopcard .body{padding:12px 14px 14px}
-.shopcard h3{margin:0;font-size:17px;font-weight:800;color:var(--brandgreen)}
-.shopcard .tagline{margin:3px 0 0;font-size:13px;color:var(--muted)}
-.shopcard .villages{margin:8px 0 0;font-size:12px;color:var(--brandgreen);font-weight:600;display:flex;gap:6px;align-items:flex-start}
-.shopcard .villages svg{width:14px;height:14px;flex:0 0 auto;margin-top:2px;stroke:var(--brandgreen);fill:none;stroke-width:2}
-.shopcard .go{margin-top:10px;font-size:13px;font-weight:700;color:var(--wine);display:flex;align-items:center;gap:4px}
+.shopcard .banner{width:104px;flex:0 0 104px;aspect-ratio:12/5;align-self:center;object-fit:cover;background:var(--chip);display:block;border-radius:10px;margin:8px 0 8px 8px}
+.shopcard .body{padding:10px 12px;min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.shopcard h3{margin:0;font-size:14.5px;font-weight:800;color:var(--brandgreen);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shopcard .tagline{margin:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shopcard .villages{margin:4px 0 0;font-size:11px;color:var(--brandgreen);font-weight:600;display:flex;gap:4px;align-items:flex-start}
+.shopcard .villages svg{width:12px;height:12px;flex:0 0 auto;margin-top:2px;stroke:var(--brandgreen);fill:none;stroke-width:2}
+.shopcard .villages span{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.shopcard .go{margin-top:4px;font-size:11.5px;font-weight:700;color:var(--wine);display:flex;align-items:center;gap:4px}
 
 .state{text-align:center;color:var(--muted);font-size:14px;padding:30px 20px}
 .state.err{color:var(--madder,#ab3326)}
@@ -92,8 +93,10 @@ button{font:inherit;cursor:pointer;color:inherit}
 .tabbar .badge[hidden]{display:none}
 
 .scrim{position:fixed;inset:0;background:rgba(24,8,14,.5);z-index:40}
-.sheet{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:var(--surface);border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:41;max-height:75vh;overflow-y:auto}
-.sheet h3{margin:4px 0 10px;font-size:18px}
+/* Floats as a rounded card ABOVE the tabbar (not a full-width sheet covering it) — kept well clear
+   of the tabbar's own height + safe-area inset, with side margins so it reads as a compact popup. */
+.sheet{position:fixed;left:16px;right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px));max-width:448px;margin:0 auto;background:var(--surface);border-radius:18px;padding:16px;z-index:41;max-height:50vh;overflow-y:auto;box-shadow:0 16px 40px rgba(30,5,15,.22)}
+.sheet h3{margin:4px 0 10px;font-size:16px}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 10px}
 .x{position:absolute;right:14px;top:14px;background:none;border:0;font-size:18px;color:var(--muted)}
 .bagrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -300,7 +303,8 @@ function renderState(html, cls){
   listEl.innerHTML = '<div class="state' + (cls ? " " + cls : "") + '">' + html + "</div>";
 }
 
-var lastShops = [], currentPincode = "", currentVillage = "", villageOptions = [];
+var lastShops = [], currentPincode = "", currentVillage = "", currentVillageHi = "", villageOptions = [];
+function villageDisplay(name, nameHi){ return (LANG === "hi" && nameHi) ? nameHi : (name || nameHi || ""); }
 
 /* ============== Pincode -> village step ============== */
 function fetchVillages(pincode){
@@ -315,15 +319,18 @@ function showVillageChips(villages){
   var box = $("#vchips");
   if(!villages.length){ box.hidden = true; box.innerHTML=""; return; }
   box.hidden = false;
+  // villages: [{name, nameHi}] — canonical match key is always the English `name` (data-v), only the
+  // label shown on the chip switches script with the current language.
   box.innerHTML = villages.map(function(v){
-    return '<button class="vchip" data-v="'+escapeHtml(v)+'">'+escapeHtml(v)+'</button>';
+    return '<button class="vchip" data-v="'+escapeHtml(v.name)+'" data-vhi="'+escapeHtml(v.nameHi||"")+'">'+escapeHtml(villageDisplay(v.name, v.nameHi))+'</button>';
   }).join("");
 }
 $("#vchips").onclick = function(e){
   var b = e.target.closest(".vchip"); if(!b) return;
   $("#vchips").querySelectorAll(".vchip").forEach(function(x){ x.classList.toggle("on", x===b); });
   currentVillage = b.dataset.v;
-  writeJSON(LOC_KEY, { pincode: currentPincode, village: currentVillage });
+  currentVillageHi = b.dataset.vhi || "";
+  writeJSON(LOC_KEY, { pincode: currentPincode, village: currentVillage, villageHi: currentVillageHi });
   collapseToChip();
   loadShops(currentPincode);
 };
@@ -338,8 +345,9 @@ function expandPincodeCard(){
 }
 function renderLocChip(){
   if($("#pincodeCard").hidden && currentPincode){
+    var vLabel = villageDisplay(currentVillage, currentVillageHi);
     $("#locchipWrap").innerHTML =
-      '<div class="locchip">📍 ' + escapeHtml(currentVillage ? (currentVillage+", "+currentPincode) : currentPincode) +
+      '<div class="locchip">📍 ' + escapeHtml(vLabel ? (vLabel+", "+currentPincode) : currentPincode) +
       ' <button id="chipChange">· ' + t("change") + '</button></div>';
     var b = $("#chipChange"); if(b) b.onclick = function(){ expandPincodeCard(); };
   } else {
@@ -359,8 +367,8 @@ function startPincodeFlow(pincode){
       $("#searchwrap").hidden = true;
     } else {
       // No village mapping for this pincode yet — just show shops for the pincode directly.
-      currentVillage = "";
-      writeJSON(LOC_KEY, { pincode: pincode, village: "" });
+      currentVillage = ""; currentVillageHi = "";
+      writeJSON(LOC_KEY, { pincode: pincode, village: "", villageHi: "" });
       collapseToChip();
       loadShops(pincode);
     }
@@ -374,7 +382,7 @@ $("#goBtn").onclick = function(){
 };
 $("#pin").addEventListener("keydown", function(e){ if(e.key === "Enter") $("#goBtn").click(); });
 $("#showAllBtn").onclick = function(){
-  currentPincode = ""; currentVillage = "";
+  currentPincode = ""; currentVillage = ""; currentVillageHi = "";
   expandPincodeCard();
   showVillageChips([]);
   loadShops("");
@@ -384,7 +392,7 @@ $("#showAllBtn").onclick = function(){
 function renderShops(shops, pincode, village){
   lastShops = shops;
   labelEl.hidden = false;
-  labelEl.textContent = pincode ? t("serving")(village, pincode) : t("all_shops");
+  labelEl.textContent = pincode ? t("serving")(villageDisplay(village, currentVillageHi), pincode) : t("all_shops");
   $("#searchwrap").hidden = shops.length === 0;
   if(!shops.length){
     renderState(pincode
@@ -426,7 +434,11 @@ function enrichShopBanners(shops){
   });
 }
 function shopCardHTML(s){
-  var villages = (s.servesVillages||[]).join(", ");
+  // servesVillagesHi lines up 1:1 with servesVillages (same shop, same order) — use it in Hindi
+  // mode when it's actually there; a shop whose API didn't answer falls back to the English list.
+  var useHi = LANG === "hi" && s.servesVillagesHi && s.servesVillagesHi.length === (s.servesVillages||[]).length;
+  var villageList = useHi ? s.servesVillagesHi : (s.servesVillages||[]);
+  var villages = villageList.join(", ");
   var cachedBanner = shopBannerCache[s.shopId];
   var bannerUrl = (cachedBanner !== undefined ? cachedBanner : s.bannerUrl) || "";
   var banner = bannerUrl ? '<img class="banner" src="'+escapeHtml(bannerUrl)+'" alt="">' : "";
@@ -613,7 +625,7 @@ $("#langEn").onclick = function(){ setLang("en"); };
     return;
   }
   if(saved && saved.pincode){
-    currentPincode = saved.pincode; currentVillage = saved.village || "";
+    currentPincode = saved.pincode; currentVillage = saved.village || ""; currentVillageHi = saved.villageHi || "";
     $("#pin").value = saved.pincode;
     collapseToChip();
     loadShops(saved.pincode);
