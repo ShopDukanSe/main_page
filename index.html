@@ -73,9 +73,11 @@ button{font:inherit;cursor:pointer;color:inherit}
 .shopcard{display:flex;align-items:stretch;width:100%;height:84px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(30,5,15,.06);color:inherit;text-decoration:none}
 .shopcard, .shopcard *{text-decoration:none}
 /* Banner fills the full height of the card (not a small centred thumbnail) — width follows from
-   the same 12:5 aspect ratio as the shop's own promo carousel, so it's never stretched/cropped oddly. */
-.shopcard .banner{height:100%;width:auto;aspect-ratio:12/5;flex:0 0 auto;object-fit:cover;background:var(--chip);display:block}
-.shopcard .body{padding:8px 12px;min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px}
+   the same 12:5 aspect ratio as the shop's own promo carousel, so it's never stretched/cropped oddly.
+   Explicit radius on its own two outer corners — relying on the card's overflow:hidden alone left
+   them looking square. */
+.shopcard .banner{height:100%;width:auto;aspect-ratio:12/5;flex:0 0 auto;object-fit:cover;background:var(--chip);display:block;border-radius:14px 0 0 14px}
+.shopcard .body{padding:8px 12px;min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;border-radius:0 14px 14px 0}
 .shopcard h3{margin:0;font-size:15px;font-weight:800;color:var(--brandgreen);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .shopcard .tagline{margin:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -441,7 +443,7 @@ function shopCardHTML(s){
     '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'" data-shopid="'+escapeHtml(s.shopId)+'">' +
       banner +
       '<div class="body">' +
-        '<h3>'+escapeHtml(s.name)+'</h3>' +
+        '<h3>'+escapeHtml(s.name)+(s.location?', '+escapeHtml(s.location):'')+'</h3>' +
         (s.tagline ? '<p class="tagline">'+escapeHtml(s.tagline)+'</p>' : '') +
       '</div>' +
     '</a>'
