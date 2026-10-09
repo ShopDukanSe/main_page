@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ShopDukaanSe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Mukta:wght@400;500;600;700;800&display=swap">
+<style>
+/* ShopDukaanSe — central marketplace landing page.
+   Flow: pincode entry -> fetch Directory API (Directory_Code.gs, a SEPARATE Apps Script +
+   Google Sheet from any individual shop) -> Swiggy/Zomato-style shop cards -> tap a card to
+   go straight to THAT shop's own catalogue.html (its own separate Sheet/Script/repo).
+   This page never touches any shop's own data — it only reads the central "Shops" directory.
+   Language: English (English script) or Hindi (Devanagari script) — never mixed. */
+:root{
+  --brandgreen:#0d6758; --wine:#0b574a; --gold:#c08a2e;
+  --bg:#fbf4ec; --surface:#ffffff; --fg:#2a1a22; --muted:#7a6a6f; --line:#ece0d4; --chip:#f6ebdd;
+  --display:"Yatra One","Mukta",Georgia,serif; --body:"Mukta",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html,body{height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+button{font:inherit;cursor:pointer;color:inherit}
+#app{max-width:480px;margin:0 auto;min-height:100%;background:var(--bg);box-shadow:0 0 0 1px var(--line);position:relative}
+
+.topbar{padding:22px 20px 18px;position:relative}
+.topbar .hd{display:flex;align-items:center;justify-content:center;position:relative}
+.topbar h1{font-family:var(--display);font-weight:400;font-size:32px;margin:0;color:var(--brandgreen);text-align:center}
+.topbar p{margin:6px 0 0;color:var(--muted);font-size:13.5px;text-align:center}
+.langtog{position:absolute;right:0;top:0;display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.langtog button{padding:6px 12px;font-size:12px;font-weight:700;background:none;border:0;color:var(--muted)}
+.langtog button.on{background:var(--brandgreen);color:#fff}
+
+.pincodeCard{margin:0 16px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(30,5,15,.06)}
+.pincodeCard label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pinrow{display:flex;gap:8px}
+.pinrow input{flex:1;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;letter-spacing:.03em;background:var(--bg)}
+.pinrow button{background:var(--brandgreen);color:#fff;border:0;border-radius:12px;padding:0 20px;font-weight:700;font-size:14px}
+.pinrow button:disabled{opacity:.5}
+.pinhint{font-size:12px;color:var(--muted);margin-top:8px}
+.pinhint button{background:none;border:0;padding:0;color:var(--brandgreen);font-weight:700;text-decoration:underline}
+
+.sec-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:18px 16px 8px}
+
+#list{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
+
+.shopcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px rgba(30,5,15,.07)}
+.shopcard .banner{width:100%;height:120px;object-fit:cover;background:var(--chip);display:block}
+.shopcard .body{padding:12px 14px 14px}
+.shopcard h3{margin:0;font-size:17px;font-weight:800}
+.shopcard .tagline{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.shopcard .villages{margin:8px 0 0;font-size:12px;color:var(--brandgreen);font-weight:600;display:flex;gap:6px;align-items:flex-start}
+.shopcard .villages svg{width:14px;height:14px;flex:0 0 auto;margin-top:2px;stroke:var(--brandgreen);fill:none;stroke-width:2}
+.shopcard .go{margin-top:10px;font-size:13px;font-weight:700;color:var(--wine);display:flex;align-items:center;gap:4px}
+
+.state{text-align:center;color:var(--muted);font-size:14px;padding:30px 20px}
+.state.err{color:var(--madder,#ab3326)}
+.spinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--brandgreen);border-radius:50%;margin:0 auto 10px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.footnote{text-align:center;color:var(--muted);font-size:12px;padding:10px 20px 26px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="hd">
+      <h1>ShopDukaanSe</h1>
+      <div class="langtog" id="langtog">
+        <button id="langHi">हिंदी</button>
+        <button id="langEn">EN</button>
+      </div>
+    </div>
+    <p id="tagline"></p>
+  </div>
+
+  <div class="pincodeCard">
+    <label for="pin" id="pinLabel"></label>
+    <div class="pinrow">
+      <input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6">
+      <button id="goBtn"></button>
+    </div>
+    <div class="pinhint"><span id="pinHintText"></span> <button id="showAllBtn"></button></div>
+  </div>
+
+  <div class="sec-label" id="listLabel" hidden></div>
+  <div id="list"></div>
+
+</div>
+
+<script>
+/* ===== CONFIGURE THIS ===== */
+/* Paste the /exec URL you get after deploying Directory_Code.gs as a Web App here. */
+var DIRECTORY_API_URL = "https://script.google.com/macros/s/AKfycbyUwJdKLtoOmLYBTKPYkz7Oif0xVjsgq_JTHMzGYl64v64xbr4tsZQ1AnfUHYFy-zI/exec";
+/* =========================== */
+
+var $ = function(s){ return document.querySelector(s); };
+var listEl = $("#list"), labelEl = $("#listLabel");
+
+var LANG = "hi"; // default Hindi (Devanagari), matches catalogue.html's default audience
+
+var STR = {
+  en: {
+    tagline: "Order straight from shops in your area",
+    pin_label: "Enter your pincode",
+    pin_ph: "e.g. 461775",
+    go: "Search",
+    pin_hint: "Don't know the pincode?",
+    show_all: "See all shops",
+    serving: function(p){ return "Shops delivering to " + p; },
+    all_shops: "All shops",
+    delivers_to: "Delivers to: ",
+    view_shop: "View shop",
+    none_for_pincode: "No shop delivers to this pincode yet.",
+    none_listed: "No shops are listed yet.",
+    loading: "Looking for shops…",
+    setup_needed: "Setup pending: deploy Directory_Code.gs and paste its URL into DIRECTORY_API_URL in home.html.",
+    generic_error: "Something went wrong. Please try again.",
+    network_error: "Please check your internet connection and try again."
+  },
+  hi: {
+    tagline: "अपने आस-पास की दुकानों से सीधा ऑर्डर करें",
+    pin_label: "अपना पिनकोड डालें",
+    pin_ph: "जैसे 461775",
+    go: "खोजें",
+    pin_hint: "पिनकोड नहीं पता?",
+    show_all: "सभी दुकानें देखें",
+    serving: function(p){ return "पिनकोड (" + p + ") पर डिलीवर करने वाली दुकानें"; },
+    all_shops: "सभी दुकानें",
+    delivers_to: "डिलीवरी क्षेत्र: ",
+    view_shop: "दुकान देखें",
+    none_for_pincode: "इस पिनकोड पर अभी कोई दुकान डिलीवर नहीं करती।",
+    none_listed: "अभी कोई दुकान सूचीबद्ध नहीं है।",
+    loading: "दुकानें खोजी जा रही हैं…",
+    setup_needed: "सेटअप बाकी है: Directory_Code.gs डिप्लॉय करें और उसका URL home.html में DIRECTORY_API_URL में डालें।",
+    generic_error: "कुछ गड़बड़ हो गई। कृपया दोबारा कोशिश करें।",
+    network_error: "कृपया इंटरनेट कनेक्शन जांचें और दोबारा कोशिश करें।"
+  }
+};
+function t(key){ return STR[LANG][key]; }
+
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g, function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+  });
+}
+
+function applyStaticLabels(){
+  document.title = "ShopDukaanSe";
+  $("#tagline").textContent = t("tagline");
+  $("#pinLabel").textContent = t("pin_label");
+  $("#pin").placeholder = t("pin_ph");
+  $("#goBtn").textContent = t("go");
+  $("#pinHintText").textContent = t("pin_hint");
+  $("#showAllBtn").textContent = t("show_all");
+  $("#langHi").classList.toggle("on", LANG==="hi");
+  $("#langEn").classList.toggle("on", LANG==="en");
+  html.lang = LANG;
+}
+var html = document.documentElement;
+
+function renderState(html, cls){
+  listEl.innerHTML = '<div class="state' + (cls ? " " + cls : "") + '">' + html + "</div>";
+}
+
+var lastShops = null, lastPincode = "";
+
+function renderShops(shops, pincode){
+  labelEl.hidden = false;
+  labelEl.textContent = pincode ? t("serving")(pincode) : t("all_shops");
+  if(!shops.length){
+    renderState(pincode
+      ? t("none_for_pincode") + ' <br><button id="tryAll" style="margin-top:8px;background:none;border:0;color:var(--brandgreen);font-weight:700;text-decoration:underline">' + t("show_all") + '</button>'
+      : t("none_listed"));
+    if(pincode){ var b=$("#tryAll"); if(b) b.onclick=function(){ loadShops(""); }; }
+    return;
+  }
+  listEl.innerHTML = shops.map(function(s){
+    var villages = (s.servesVillages||[]).join(", ");
+    var banner = s.bannerUrl ? '<img class="banner" src="'+escapeHtml(s.bannerUrl)+'" alt="">' : "";
+    return (
+      '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'">' +
+        banner +
+        '<div class="body">' +
+          '<h3>'+escapeHtml(s.name)+'</h3>' +
+          (s.tagline ? '<p class="tagline">'+escapeHtml(s.tagline)+'</p>' : '') +
+          (villages ? '<p class="villages"><svg viewBox="0 0 24 24"><path d="M12 21s-7-7.2-7-12a7 7 0 1 1 14 0c0 4.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span>'+t("delivers_to")+escapeHtml(villages)+'</span></p>' : '') +
+          '<div class="go">'+t("view_shop")+' &rarr;</div>' +
+        '</div>' +
+      '</a>'
+    );
+  }).join("");
+}
+
+function loadShops(pincode){
+  lastPincode = pincode;
+  renderState('<div class="spinner"></div>' + t("loading"));
+  labelEl.hidden = true;
+  if(!DIRECTORY_API_URL || DIRECTORY_API_URL.indexOf("PASTE_YOUR") === 0){
+    renderState(t("setup_needed"), "err");
+    return;
+  }
+  var url = DIRECTORY_API_URL + (pincode ? ("?pincode=" + encodeURIComponent(pincode)) : "");
+  fetch(url).then(function(r){ return r.json(); }).then(function(data){
+    if(!data || !data.ok){ renderState(t("generic_error"), "err"); return; }
+    lastShops = data.shops || [];
+    renderShops(lastShops, pincode);
+  }).catch(function(){
+    renderState(t("network_error"), "err");
+  });
+}
+
+$("#goBtn").onclick = function(){
+  var v = $("#pin").value.replace(/\D/g, "");
+  if(v.length !== 6){ $("#pin").focus(); return; }
+  loadShops(v);
+};
+$("#pin").addEventListener("keydown", function(e){ if(e.key === "Enter") $("#goBtn").click(); });
+$("#showAllBtn").onclick = function(){ loadShops(""); };
+
+function setLang(lang){
+  LANG = lang;
+  applyStaticLabels();
+  // Re-render whatever's currently on screen in the new language, without a refetch.
+  if(lastShops !== null) renderShops(lastShops, lastPincode);
+}
+$("#langHi").onclick = function(){ setLang("hi"); };
+$("#langEn").onclick = function(){ setLang("en"); };
+
+applyStaticLabels();
+
+/* If a shop's direct link/QR ever points here with ?pincode= pre-filled, honor it; otherwise
+   show nothing until the customer types a pincode (keeps the page fast/clean, no "browse
+   everything" wall of shops by default). */
+(function(){
+  var qp = new URLSearchParams(location.search);
+  var pin = (qp.get("pincode")||"").replace(/\D/g,"");
+  if(pin){ $("#pin").value = pin; loadShops(pin); }
+})();
+</script>
+</body>
+</html>
