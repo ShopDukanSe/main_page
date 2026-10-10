@@ -402,42 +402,14 @@ function renderShops(shops, pincode, village){
     return;
   }
   listEl.innerHTML = shops.map(shopCardHTML).join("");
-  enrichShopBanners(shops);
-}
-// Each shop's OWN first promo banner (language-aware, same one shown in its own catalogue.html
-// carousel) is reused directly here instead of a separate banner_url upload. Cached per shop_id so
-// re-rendering the list (search, language switch) doesn't refetch. Falls back to the Directory's
-// banner_url, then to no image at all.
-var shopBannerCache = {}; // shopId -> resolved banner URL (or "" once confirmed none)
-function bannerForConfig(config, n){
-  return (config && (config["banner_"+n+"_"+LANG] || config["banner_"+n])) || "";
-}
-function enrichShopBanners(shops){
-  shops.forEach(function(s){
-    if(!s.apiUrl || shopBannerCache[s.shopId] !== undefined) return;
-    var url = s.apiUrl + (s.apiUrl.indexOf("?")!==-1?"&":"?") + "action=all";
-    fetch(url).then(function(r){ return r.json(); }).then(function(data){
-      var banner = bannerForConfig(data && data.config, 1) || s.bannerUrl || "";
-      shopBannerCache[s.shopId] = banner;
-      if(!banner) return;
-      var card = listEl.querySelector('.shopcard[data-shopid="'+CSS.escape(s.shopId)+'"]');
-      if(!card) return;
-      var img = card.querySelector("img.banner");
-      if(!img){
-        img = document.createElement("img");
-        img.className = "banner";
-        img.alt = "";
-        card.insertBefore(img, card.firstChild);
-      }
-      img.src = banner;
-    }).catch(function(){ shopBannerCache[s.shopId] = s.bannerUrl || ""; });
-  });
 }
 function shopCardHTML(s){
   // Just the banner + name + proprietor/tagline — the whole card is a link to the shop already,
   // so delivery-village details and a separate "view shop" line are redundant here.
-  var cachedBanner = shopBannerCache[s.shopId];
-  var bannerUrl = (cachedBanner !== undefined ? cachedBanner : s.bannerUrl) || "";
+  // banner1/banner1Hi come straight from the Directory's own response (it already resolved them
+  // from that shop's Config while deriving villages) — no second per-shop fetch needed here any
+  // more, which used to double the round trips on every single page load.
+  var bannerUrl = (LANG === "hi" && s.banner1Hi) ? s.banner1Hi : (s.banner1 || s.bannerUrl || "");
   var banner = bannerUrl ? '<img class="banner" src="'+escapeHtml(bannerUrl)+'" alt="">' : "";
   return (
     '<a class="shopcard" href="'+escapeHtml(s.catalogueUrl)+'" data-shopid="'+escapeHtml(s.shopId)+'">' +
@@ -598,9 +570,8 @@ function setLang(lang){
   LANG = lang;
   try{ localStorage.setItem(LANG_KEY, lang); }catch(e){}
   applyStaticLabels();
-  // Each shop's reused banner is language-specific (banner_1_hi vs banner_1_en) — clear the cache
-  // and re-render so the right one gets (re)fetched.
-  shopBannerCache = {};
+  // banner1/banner1Hi are already both present on each shop object from the Directory response —
+  // re-rendering just picks the right one for the new language, no refetch needed.
   var listToShow = searchFiltered || lastShops;
   if(listToShow && listToShow.length){ renderShops(listToShow, currentPincode, currentVillage); }
 }
