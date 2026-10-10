@@ -65,21 +65,16 @@ button{font:inherit;cursor:pointer;color:inherit}
 
 .sec-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 16px 8px}
 
-#list{padding:0 16px 24px;display:flex;flex-direction:column;gap:12px}
+/* Two-column grid of vertical cards (photo on top, name below) — like a Swiggy/Zomato store grid —
+   instead of one full-width row per shop. */
+#list{padding:0 16px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
-/* Swiggy/Zomato-style compact ROW card: banner on the left (small, but same 12:5 aspect ratio as
-   the shop's own promo carousel so nothing looks cropped oddly), name/tagline/villages on the
-   right — instead of a tall stacked card with a full-width banner. */
-.shopcard{display:flex;align-items:stretch;width:100%;height:84px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(30,5,15,.06);color:inherit;text-decoration:none}
+.shopcard{display:flex;flex-direction:column;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(30,5,15,.06);color:inherit;text-decoration:none}
 .shopcard, .shopcard *{text-decoration:none}
-/* Banner fills the full height of the card (not a small centred thumbnail) — width follows from
-   the same 12:5 aspect ratio as the shop's own promo carousel, so it's never stretched/cropped oddly.
-   Explicit radius on its own two outer corners — relying on the card's overflow:hidden alone left
-   them looking square. */
-.shopcard .banner{height:100%;width:auto;aspect-ratio:12/5;flex:0 0 auto;object-fit:cover;background:var(--chip);display:block;border-radius:14px 0 0 14px}
-.shopcard .body{padding:8px 12px;min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;border-radius:0 14px 14px 0}
-.shopcard h3{margin:0;font-size:15px;font-weight:800;color:var(--brandgreen);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.shopcard .tagline{margin:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shopcard .banner{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--chip);display:block}
+.shopcard .body{padding:8px 10px 10px;min-width:0;display:flex;flex-direction:column;gap:2px}
+.shopcard h3{margin:0;font-size:13.5px;font-weight:800;color:var(--brandgreen);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.shopcard .tagline{margin:0;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .state{text-align:center;color:var(--muted);font-size:14px;padding:30px 20px}
 .state.err{color:var(--madder,#ab3326)}
