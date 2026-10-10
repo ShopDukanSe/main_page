@@ -501,9 +501,12 @@ async function resolveShopFromDirectory(){
   SELF_URL = location.origin + location.pathname + "?shop=" + encodeURIComponent(SHOP_ID);
   let row;
   try{
-    const res = await fetch(DIRECTORY_API_URL);
+    // shopLookup is a direct, no-fan-out read of this one shop's Directory row — it does NOT make
+    // the Directory call out to every other shop's own API just to answer "where is shop X",
+    // unlike fetching the full shop list, so opening this page stays fast as more shops are added.
+    const res = await fetch(DIRECTORY_API_URL + "?type=shopLookup&shop=" + encodeURIComponent(SHOP_ID));
     const data = await res.json();
-    row = data && data.ok && (data.shops || []).find(s => s.shopId === SHOP_ID);
+    row = (data && data.ok) ? data : null;
   }catch(e){ /* fall through to the not-found message below */ }
   if(!row){ fail("This shop could not be found right now. Please check the link or try again in a moment."); throw new Error("unknown or unreachable shop_id: " + SHOP_ID); }
   API_URL = row.apiUrl || "";
